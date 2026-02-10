@@ -1,4 +1,3 @@
-// backend/routes/password-reset.js
 const express = require('express');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
@@ -38,19 +37,17 @@ router.post('/password-reset/request', async (req, res) => {
       [email]
     );
 
-    // Pour la sécurité, on ne dit pas si l'email existe ou non
-    // On renvoie toujours le même message
+    // Email n'existe pas
     if (userResult.rows.length === 0) {
       return res.json({
-        message: 'Si cet email existe, un lien de réinitialisation a été envoyé.'
+        exists: false,
+        message: `Cette email n'existe pas pour ${userType}`
       });
     }
 
     // Générer un token sécurisé
     const resetToken = crypto.randomBytes(32).toString('hex');
-
-    // Expiration : 1 heure
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
 
     // Supprimer les anciens tokens pour cet email
     await pool.query(
@@ -71,7 +68,8 @@ router.post('/password-reset/request', async (req, res) => {
     console.log(`✅ Token de réinitialisation envoyé à ${email}`);
 
     res.json({
-      message: 'Si cet email existe, un lien de réinitialisation a été envoyé.'
+      exists: true,
+      message: 'Un lien de réinitialisation a été envoyé à votre email.'
     });
 
   } catch (error) {
@@ -92,7 +90,6 @@ router.get('/password-reset/verify-token/:token', async (req, res) => {
       return res.status(400).json({ message: 'Token manquant' });
     }
 
-    // Rechercher le token
     const result = await pool.query(
       `SELECT * FROM password_reset_tokens 
        WHERE token = $1 AND is_used = FALSE
@@ -109,7 +106,6 @@ router.get('/password-reset/verify-token/:token', async (req, res) => {
 
     const resetToken = result.rows[0];
 
-    // Vérifier expiration
     if (new Date() > new Date(resetToken.expires_at)) {
       return res.status(400).json({ 
         message: 'Lien expiré. Veuillez faire une nouvelle demande.',
@@ -146,7 +142,6 @@ router.post('/password-reset/reset', async (req, res) => {
       return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
     }
 
-    // Rechercher le token
     const tokenResult = await pool.query(
       `SELECT * FROM password_reset_tokens 
        WHERE token = $1 AND is_used = FALSE
@@ -160,12 +155,10 @@ router.post('/password-reset/reset', async (req, res) => {
 
     const resetToken = tokenResult.rows[0];
 
-    // Vérifier expiration
     if (new Date() > new Date(resetToken.expires_at)) {
       return res.status(400).json({ message: 'Lien expiré' });
     }
 
-    // Tables correspondantes
     const tables = {
       patient: 'patients',
       medecin: 'medecins',
@@ -178,16 +171,13 @@ router.post('/password-reset/reset', async (req, res) => {
       return res.status(400).json({ message: 'Type utilisateur invalide' });
     }
 
-    // Hasher le nouveau mot de passe
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Mettre à jour le mot de passe
     await pool.query(
       `UPDATE ${table} SET mot_de_passe = $1 WHERE email = $2`,
       [hashedPassword, resetToken.email]
     );
 
-    // Marquer le token comme utilisé
     await pool.query(
       'UPDATE password_reset_tokens SET is_used = TRUE WHERE id = $1',
       [resetToken.id]
