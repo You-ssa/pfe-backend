@@ -14,6 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', require('./routes/login'));
 app.use('/api', require('./routes/register'));
 app.use('/api', require('./routes/admin'));
+app.use('/api', require('./routes/verification'));        // ✅ NOUVEAU
+app.use('/api', require('./routes/password-reset'));      // ✅ NOUVEAU
 
 // Route de test
 app.get('/', (req, res) => {
@@ -26,6 +28,15 @@ app.get('/', (req, res) => {
         medecin: 'POST /api/register/medecin',
         secretaire: 'POST /api/register/secretaire',
         admin: 'POST /api/register/admin'
+      },
+      verification: {
+        sendCode: 'POST /api/verification/send-code',
+        verifyCode: 'POST /api/verification/verify-code'
+      },
+      passwordReset: {
+        request: 'POST /api/password-reset/request',
+        verifyToken: 'GET /api/password-reset/verify-token/:token',
+        reset: 'POST /api/password-reset/reset'
       },
       admin: {
         stats: 'GET /api/stats',
