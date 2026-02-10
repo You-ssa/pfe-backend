@@ -61,27 +61,47 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    // Réponse compatible Angular
+    // Construire la réponse selon le type d'utilisateur
+    let userResponse = {
+      id: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      telephone: user.telephone,
+      userType,
+      dateInscription: user.date_inscription,
+      photoBase64: user.photo_base64 || null
+    };
+
+    // Ajouter les champs spécifiques aux patients
+    if (userType === 'patient') {
+      userResponse.sexe = user.sexe || null;
+      userResponse.pays = user.pays || null;
+      userResponse.ville = user.ville || null;
+    }
+
+    // Ajouter les champs spécifiques aux médecins
+    if (userType === 'medecin') {
+      userResponse.sexe = user.sexe || null;
+      userResponse.specialite = user.specialite || null;
+      userResponse.rpps = user.rpps || null;
+      userResponse.adresseHopital = user.adresse_hopital || null;
+      userResponse.statut = user.statut || 'approuve';
+    }
+
+    // Ajouter les champs spécifiques aux secrétaires
+    if (userType === 'secretaire') {
+      userResponse.sexe = user.sexe || null;
+      userResponse.specialite = user.specialite || null;
+      userResponse.rpps = user.rpps || null;
+      userResponse.adresseHopital = user.adresse_hopital || null;
+      userResponse.poste = user.poste || null;
+      userResponse.departement = user.departement || null;
+      userResponse.statut = user.statut || 'approuve';
+    }
+
     res.json({
-      user: {
-        id: user.id,
-        nom: user.nom,
-        prenom: user.prenom,
-        email: user.email,
-        telephone: user.telephone,
-        sexe: user.sexe || null,
-        pays: user.pays || null,
-        ville: user.ville || null,
-        specialite: user.specialite || null,
-        rpps: user.rpps || null,
-        adresseHopital: user.adresse_hopital || null,
-        poste: user.poste || null,
-        departement: user.departement || null,
-        userType,
-        statut: user.statut || 'approuve',
-        dateInscription: user.date_inscription,
-        photoBase64: user.photo_base64 || null
-      },
+      user: userResponse,
       token
     });
 
